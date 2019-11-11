@@ -18,6 +18,15 @@ namespace HotChocolate.Language
             SourceText = Encoding.UTF8.GetString(reader.GraphQLData.ToArray());
         }
 
+        internal SyntaxException(Utf8GraphQLReaderUnsafe reader, string message)
+            : base(message)
+        {
+            Position = reader.Position;
+            Line = reader.Line;
+            Column = reader.Column;
+            SourceText = Encoding.UTF8.GetString(reader.GraphQLData.ToArray());
+        }
+
         public int Position { get; }
 
         public int Line { get; }
