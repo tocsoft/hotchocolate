@@ -6,6 +6,8 @@ using HotChocolate.Configuration;
 using HotChocolate.Server;
 using HotChocolate.Execution.Batching;
 using HotChocolate.Types.Relay;
+using System.Collections.Generic;
+using HotChocolate.Contracts;
 #if ASPNETCLASSIC
 using HotChocolate.AspNetClassic.Interceptors;
 using HttpContext = Microsoft.Owin.IOwinContext;
@@ -24,17 +26,34 @@ namespace HotChocolate
             ISchemaBuilder schemaBuilder)
         {
             return services
-                .AddGraphQLSchema(schemaBuilder)
+                .AddGraphQLWithName(string.Empty, schemaBuilder);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(this IServiceCollection services,
+            string schemaName,
+            ISchemaBuilder schemaBuilder)
+        {
+            return services
+                .AddGraphQLSchema(schemaName, schemaBuilder)
 #if !ASPNETCLASSIC
-                .AddGraphQLSubscriptions()
+                //.AddGraphQLSubscriptions()
 #endif
                 .AddJsonSerializer()
-                .AddQueryExecutor()
-                .AddBatchQueryExecutor();
+                .AddQueryExecutor(schemaName)
+                .AddBatchQueryExecutor(schemaName);
         }
+
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            ISchema schema)
+        {
+            return services.AddGraphQLWithName(string.Empty, schema);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
             ISchema schema)
         {
             if (services == null)
@@ -47,15 +66,24 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(schema));
             }
 
-            QueryExecutionBuilder.BuildDefault(services);
-            return services.AddSchema(schema)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            QueryExecutionBuilder.BuildDefault(services, schemaName);
+            return services.AddSchema(schemaName, schema)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
             ISchema schema,
             Action<IQueryExecutionBuilder> build)
+        {
+            return services.AddGraphQLWithName(string.Empty, schema, build);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+           this IServiceCollection services,
+           string schemaName,
+           ISchema schema,
+           Action<IQueryExecutionBuilder> build)
         {
             if (services == null)
             {
@@ -74,14 +102,22 @@ namespace HotChocolate
 
             QueryExecutionBuilder builder = QueryExecutionBuilder.New();
             build(builder);
-            builder.Populate(services);
+            builder.Populate(schemaName, services);
 
-            return services.AddSchema(schema)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            return services.AddSchema(schemaName, schema)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
+           this IServiceCollection services,
+           Func<IServiceProvider, ISchema> schemaFactory)
+        {
+            return services.AddGraphQLWithName(string.Empty, schemaFactory);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
             this IServiceCollection services,
+            string schemaName,
             Func<IServiceProvider, ISchema> schemaFactory)
         {
             if (services == null)
@@ -94,13 +130,22 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(schemaFactory));
             }
 
-            QueryExecutionBuilder.BuildDefault(services);
-            return services.AddSchema(schemaFactory)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            QueryExecutionBuilder.BuildDefault(services, schemaName);
+            return services.AddSchema(schemaName, schemaFactory)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            Func<IServiceProvider, ISchema> schemaFactory,
+            Action<IQueryExecutionBuilder> build)
+        {
+            return services.AddGraphQLWithName(string.Empty, schemaFactory, build);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
             Func<IServiceProvider, ISchema> schemaFactory,
             Action<IQueryExecutionBuilder> build)
         {
@@ -121,14 +166,22 @@ namespace HotChocolate
 
             QueryExecutionBuilder builder = QueryExecutionBuilder.New();
             build(builder);
-            builder.Populate(services);
+            builder.Populate(schemaName, services);
 
-            return services.AddSchema(schemaFactory)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            return services.AddSchema(schemaName, schemaFactory)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            Action<ISchemaConfiguration> configure)
+        {
+            return services.AddGraphQL(string.Empty, configure);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
             Action<ISchemaConfiguration> configure)
         {
             if (services == null)
@@ -141,13 +194,13 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            QueryExecutionBuilder.BuildDefault(services);
-            return services.AddSchema(s => Schema.Create(c =>
-                {
-                    c.RegisterServiceProvider(s);
-                    configure(c);
-                }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            QueryExecutionBuilder.BuildDefault(services, schemaName);
+            return services.AddSchema(schemaName, s => Schema.Create(c =>
+            {
+                c.RegisterServiceProvider(s);
+                configure(c);
+            }))
+            .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
@@ -174,18 +227,55 @@ namespace HotChocolate
             build(builder);
             builder.Populate(services);
 
-            return services.AddSchema(s => Schema.Create(c =>
-                {
-                    c.RegisterServiceProvider(s);
-                    configure(c);
-                }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            return services.AddGraphQLWithName(string.Empty, configure, build);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
+            Action<ISchemaConfiguration> configure,
+            Action<IQueryExecutionBuilder> build)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
+            if (build == null)
+            {
+                throw new ArgumentNullException(nameof(build));
+            }
+
+            QueryExecutionBuilder builder = QueryExecutionBuilder.New();
+            build(builder);
+            builder.Populate(schemaName, services);
+
+            return services.AddSchema(schemaName, s => Schema.Create(c =>
+            {
+                c.RegisterServiceProvider(s);
+                configure(c);
+            }))
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
             string schemaSource,
             Action<ISchemaConfiguration> configure)
+        {
+            return services.AddGraphQLWithName(string.Empty, schemaSource, configure);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+           this IServiceCollection services,
+            string schemaName,
+           string schemaSource,
+           Action<ISchemaConfiguration> configure)
         {
             if (services == null)
             {
@@ -202,15 +292,15 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(configure));
             }
 
-            QueryExecutionBuilder.BuildDefault(services);
+            QueryExecutionBuilder.BuildDefault(services, schemaName);
 
-            return services.AddSchema(s =>
+            return services.AddSchema(schemaName, s =>
                 Schema.Create(schemaSource, c =>
                 {
                     c.RegisterServiceProvider(s);
                     configure(c);
                 }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
@@ -243,19 +333,62 @@ namespace HotChocolate
             build(builder);
             builder.Populate(services);
 
-            return services.AddSchema(s =>
+            return services.AddGraphQLWithName(string.Empty, schemaSource, configure, build);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
+            string schemaSource,
+            Action<ISchemaConfiguration> configure,
+            Action<IQueryExecutionBuilder> build)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            if (string.IsNullOrEmpty(schemaSource))
+            {
+                throw new ArgumentNullException(nameof(schemaSource));
+            }
+
+            if (configure == null)
+            {
+                throw new ArgumentNullException(nameof(configure));
+            }
+
+            if (build == null)
+            {
+                throw new ArgumentNullException(nameof(build));
+            }
+
+            QueryExecutionBuilder builder = QueryExecutionBuilder.New();
+            build(builder);
+            builder.Populate(schemaName, services);
+
+            return services.AddSchema(schemaName, s =>
                 Schema.Create(schemaSource, c =>
                 {
                     c.RegisterServiceProvider(s);
                     configure(c);
                 }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
             ISchema schema,
             IQueryExecutionOptionsAccessor options)
+        {
+            return services.AddGraphQLWithName(string.Empty, schema, options);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+           this IServiceCollection services,
+           string schemaName,
+           ISchema schema,
+           IQueryExecutionOptionsAccessor options)
         {
             if (services == null)
             {
@@ -272,13 +405,22 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(options));
             }
 
-            QueryExecutionBuilder.BuildDefault(services, options);
-            return services.AddSchema(schema)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            QueryExecutionBuilder.BuildDefault(services, schemaName, options);
+            return services.AddSchema(schemaName, schema)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            Func<IServiceProvider, ISchema> schemaFactory,
+            IQueryExecutionOptionsAccessor options)
+        {
+            return services.AddGraphQLWitName(string.Empty, schemaFactory, options);
+        }
+
+        public static IServiceCollection AddGraphQLWitName(
+            this IServiceCollection services,
+            string schemaName,
             Func<IServiceProvider, ISchema> schemaFactory,
             IQueryExecutionOptionsAccessor options)
         {
@@ -297,13 +439,22 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(options));
             }
 
-            QueryExecutionBuilder.BuildDefault(services, options);
-            return services.AddSchema(schemaFactory)
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+            QueryExecutionBuilder.BuildDefault(services, schemaName, options);
+            return services.AddSchema(schemaName, schemaFactory)
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            Action<ISchemaConfiguration> configure,
+            IQueryExecutionOptionsAccessor options)
+        {
+            return services.AddGraphQLWithName(string.Empty, configure, options);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
             Action<ISchemaConfiguration> configure,
             IQueryExecutionOptionsAccessor options)
         {
@@ -322,19 +473,29 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(options));
             }
 
-            QueryExecutionBuilder.BuildDefault(services, options);
+            QueryExecutionBuilder.BuildDefault(services, schemaName, options);
 
-            return services.AddSchema(s =>
+            return services.AddSchema(schemaName, s =>
                 Schema.Create(c =>
                 {
                     c.RegisterServiceProvider(s);
                     configure(c);
                 }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+                .AddBatchQueryExecutor(schemaName);
         }
 
         public static IServiceCollection AddGraphQL(
             this IServiceCollection services,
+            string schemaSource,
+            Action<ISchemaConfiguration> configure,
+            IQueryExecutionOptionsAccessor options)
+        {
+            return services.AddGraphQLWithName(string.Empty, schemaSource, configure, options);
+        }
+
+        public static IServiceCollection AddGraphQLWithName(
+            this IServiceCollection services,
+            string schemaName,
             string schemaSource,
             Action<ISchemaConfiguration> configure,
             IQueryExecutionOptionsAccessor options)
@@ -359,15 +520,15 @@ namespace HotChocolate
                 throw new ArgumentNullException(nameof(options));
             }
 
-            QueryExecutionBuilder.BuildDefault(services, options);
+            QueryExecutionBuilder.BuildDefault(services, schemaName, options);
 
-            return services.AddSchema(s =>
+            return services.AddSchema(schemaName, s =>
                 Schema.Create(schemaSource, c =>
                 {
                     c.RegisterServiceProvider(s);
                     configure(c);
                 }))
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+                .AddBatchQueryExecutor(schemaName);
         }
 
         [Obsolete("Use different overload.", true)]
@@ -386,9 +547,10 @@ namespace HotChocolate
             }
 
             return services
-                .AddSingleton(executor)
+                .AddSingleton<INamedQueryExecutorProvider>(sp => new NamedQueryExecutorProvider(() => sp.GetServices<INamedQueryExecutor>()))
+                .AddSingleton(new NamedQueryExecutor(string.Empty, executor))
                 .AddSingleton(s =>
-                    s.GetRequiredService<IQueryExecutor>().Schema)
+                    new NamedSchema(string.Empty, s.GetRequiredService<IQueryExecutor>().Schema))
                 .AddJsonSerializer();
         }
 
@@ -417,18 +579,35 @@ namespace HotChocolate
             this IServiceCollection services,
             ISchema schema)
         {
-            return AddSchema(services, sp => schema);
+            return AddSchema(services, string.Empty, sp => schema);
         }
 
         private static IServiceCollection AddSchema(
             this IServiceCollection services,
             Func<IServiceProvider, ISchema> factory)
         {
+            return services.AddSchema(string.Empty, factory);
+        }
+
+        private static IServiceCollection AddSchema(
+          this IServiceCollection services,
+          string schemaName,
+          ISchema schema)
+        {
+            return AddSchema(services, sp => schema);
+        }
+
+        private static IServiceCollection AddSchema(
+            this IServiceCollection services,
+            string schemaName,
+            Func<IServiceProvider, ISchema> factory)
+        {
             services.AddSingleton<IIdSerializer, IdSerializer>();
-            services.AddSingleton(factory);
+            services.AddSingleton<INamedSchemaProvider>(sp => new NamedSchemaProvider(() => sp.GetServices<INamedSchema>()));
+            services.AddSingleton<INamedSchema>(sp => new NamedSchema(schemaName, factory(sp)));
             services.AddJsonSerializer();
 #if !ASPNETCLASSIC
-            services.AddGraphQLSubscriptions();
+            //  services.AddGraphQLSubscriptions();
 #endif
             return services;
         }

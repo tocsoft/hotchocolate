@@ -1,5 +1,6 @@
 using System;
 using HotChocolate.Language;
+using System.Threading.Tasks;
 
 #if ASPNETCLASSIC
 using Microsoft.Owin;
@@ -55,6 +56,14 @@ namespace HotChocolate.AspNetCore
                 SubscriptionPath = value;
             }
         }
+
+        public string SchemaName
+        {
+            get;
+            set;
+        }
+
+        public Func<object, ValueTask<string>> SchemaNameProvider { get; set; }
 
         public PathString SubscriptionPath
         {

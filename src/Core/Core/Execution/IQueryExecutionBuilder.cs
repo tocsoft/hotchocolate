@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using HotChocolate.Resolvers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,5 +21,9 @@ namespace HotChocolate.Execution
         void Populate(IServiceCollection services);
 
         void Populate(IServiceCollection services, bool lazyExecutor);
+
+        void Populate(string schemaName, IServiceCollection services);
+
+        void Populate(string schemaName, IServiceCollection services, bool lazyExecutor);
     }
 }

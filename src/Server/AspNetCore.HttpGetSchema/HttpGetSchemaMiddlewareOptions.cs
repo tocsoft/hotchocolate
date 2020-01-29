@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 #if ASPNETCLASSIC
 using Microsoft.Owin;
@@ -35,5 +36,7 @@ namespace HotChocolate.AspNetCore
                 _path = value;
             }
         }
+
+        public Func<object, ValueTask<string>> SchemaNameProvider { get; set; }
     }
 }

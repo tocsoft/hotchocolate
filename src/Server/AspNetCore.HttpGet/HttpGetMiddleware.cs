@@ -27,8 +27,9 @@ namespace HotChocolate.AspNetCore
         private const string _queryIdentifier = "query";
         private const string _variablesIdentifier = "variables";
 
-        private readonly IQueryExecutor _queryExecutor;
+        private readonly INamedQueryExecutorProvider _queryExecutorProvider;
         private readonly IQueryResultSerializer _resultSerializer;
+        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
 
 #if ASPNETCLASSIC
         public HttpGetMiddleware(
@@ -54,15 +55,17 @@ namespace HotChocolate.AspNetCore
         public HttpGetMiddleware(
             RequestDelegate next,
             IHttpGetMiddlewareOptions options,
-            IQueryExecutor queryExecutor,
+            INamedQueryExecutorProvider queryExecutorProvider,
             IQueryResultSerializer resultSerializer,
             IErrorHandler errorHandler)
             : base(next, options, resultSerializer, errorHandler)
         {
-            _queryExecutor = queryExecutor
-                ?? throw new ArgumentNullException(nameof(queryExecutor));
+            _queryExecutorProvider = queryExecutorProvider
+                ?? throw new ArgumentNullException(nameof(queryExecutorProvider));
             _resultSerializer = resultSerializer
                 ?? throw new ArgumentNullException(nameof(resultSerializer));
+
+            _schemaNameProvider = options.SchemaNameProvider;
         }
 #endif
 
@@ -92,7 +95,7 @@ namespace HotChocolate.AspNetCore
                 .SetQuery(requestQuery[_queryIdentifier])
                 .SetQueryName(requestQuery[_namedQueryIdentifier])
                 .SetOperation(requestQuery[_operationNameIdentifier]);
-
+            
             string variables = requestQuery[_variablesIdentifier];
             if (variables != null
                 && variables.Length > 0
@@ -108,6 +111,9 @@ namespace HotChocolate.AspNetCore
                     services,
                     builder)
                     .ConfigureAwait(false);
+
+            var schemaName = await _schemaNameProvider(context).ConfigureAwait(false);
+            var _queryExecutor = _queryExecutorProvider.GetQueryExecutor(schemaName);
 
             IExecutionResult result = await _queryExecutor
                 .ExecuteAsync(request, context.GetCancellationToken())

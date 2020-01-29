@@ -137,6 +137,12 @@ namespace HotChocolate.Types.Descriptors
             return this;
         }
 
+        public IArgumentDescriptor Ignore(bool ignore = true)
+        {
+            Definition.Ignore = ignore;
+            return this;
+        }
+
         public static ArgumentDescriptor New(
             IDescriptorContext context,
             NameString argumentName) =>

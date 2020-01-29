@@ -41,6 +41,7 @@ namespace HotChocolate.Types
 
         internal sealed override void Initialize(IInitializationContext context)
         {
+            _contextData = new Dictionary<string, object?>(context.ContextData);
             _definition = CreateDefinition(context);
 
             if (_definition is null)

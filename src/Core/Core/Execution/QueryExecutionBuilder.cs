@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using HotChocolate.Contracts;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Resolvers;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,7 +66,13 @@ namespace HotChocolate.Execution
         public void Populate(IServiceCollection services) =>
             Populate(services, false);
 
+        public void Populate(string schemaName, IServiceCollection services) =>
+            Populate(schemaName, services, false);
+
         public void Populate(IServiceCollection services, bool lazyExecutor)
+            => Populate(string.Empty, services, false);
+
+        public void Populate(string schemaName, IServiceCollection services, bool lazyExecutor)
         {
             if (services == null)
             {
@@ -79,7 +86,12 @@ namespace HotChocolate.Execution
                 list.Add(descriptor);
             }
 
-            services.AddSingleton<IQueryExecutor>(sp =>
+            services.AddSingleton<INamedQueryExecutorProvider>(sp =>
+            {
+                return new NamedQueryExecutorProvider(() => sp.GetServices<INamedQueryExecutor>());
+            });
+
+            services.AddSingleton<INamedQueryExecutor>(sp =>
             {
                 if (lazyExecutor)
                 {
@@ -87,20 +99,20 @@ namespace HotChocolate.Execution
                     (
                         () => new QueryExecutor
                         (
-                            sp.GetRequiredService<ISchema>(),
+                            sp.GetRequiredService<INamedSchemaProvider>().GetSchema(schemaName),
                             Compile(_middlewareComponents),
                             Compile(_fieldMiddlewareComponents)
                         )
-                    );
+                    ).WithName(schemaName);
                 }
                 else
                 {
                     return new QueryExecutor
                     (
-                        sp.GetRequiredService<ISchema>(),
+                        sp.GetRequiredService<INamedSchemaProvider>().GetSchema(schemaName),
                         Compile(_middlewareComponents),
                         Compile(_fieldMiddlewareComponents)
-                    );
+                    ).WithName(schemaName);
                 }
             });
         }
@@ -155,6 +167,16 @@ namespace HotChocolate.Execution
         public static IQueryExecutor BuildDefault(ISchema schema,
             IQueryExecutionOptionsAccessor options) =>
                 New().UseDefaultPipeline(options).Build(schema);
+
+        public static void BuildDefault(
+            IServiceCollection services, string name) =>
+            New().UseDefaultPipeline().Populate(name, services);
+
+        public static void BuildDefault(
+            IServiceCollection services,
+            string name,
+            IQueryExecutionOptionsAccessor options) =>
+                New().UseDefaultPipeline(options).Populate(name, services);
 
         public static void BuildDefault(
             IServiceCollection services) =>

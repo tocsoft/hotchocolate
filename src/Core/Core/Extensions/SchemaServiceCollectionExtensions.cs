@@ -5,35 +5,64 @@ using HotChocolate.Execution;
 using HotChocolate.Execution.Batching;
 using System.Linq;
 using HotChocolate.Types.Relay;
+using System.Collections.Generic;
+using HotChocolate.Contracts;
 
 namespace HotChocolate
 {
     public static class SchemaServiceCollectionExtensions
     {
         public static IServiceCollection AddGraphQLSchema(
+          this IServiceCollection services,
+          Action<ISchemaBuilder> build)
+        {
+            return services.AddGraphQLSchema(string.Empty, build);
+        }
+
+        public static IServiceCollection AddGraphQLSchema(
             this IServiceCollection services,
+            string name,
             Action<ISchemaBuilder> build)
         {
-            return services.AddSingleton<ISchema>(sp =>
-            {
-                var builder = SchemaBuilder.New();
-                build(builder);
-                builder.AddServices(sp);
-                return builder.Create();
-            }).AddSingleton<IIdSerializer, IdSerializer>();
+            return services
+                .AddSingleton<INamedSchemaProvider>(sp => new NamedSchemaProvider(() => sp.GetServices<INamedSchema>()))
+                .AddSingleton<INamedSchema>(sp =>
+                {
+                    var builder = SchemaBuilder.New();
+                    build(builder);
+                    builder.AddServices(sp);
+                    return builder.Create().WithName(name);
+                }).AddSingleton<IIdSerializer, IdSerializer>();
         }
 
         public static IServiceCollection AddGraphQLSchema(
             this IServiceCollection services,
             ISchemaBuilder builder)
         {
-            return services.AddSingleton<ISchema>(
-                sp => builder.AddServices(sp).Create())
+            return services.AddGraphQLSchema(string.Empty, builder);
+        }
+
+        public static IServiceCollection AddGraphQLSchema(
+            this IServiceCollection services,
+            string name,
+            ISchemaBuilder builder)
+        {
+            return services
+                .AddSingleton<INamedSchemaProvider>(sp => new NamedSchemaProvider(() => sp.GetServices<INamedSchema>()))
+                .AddSingleton<INamedSchema>(
+                sp => builder.AddServices(sp).Create().WithName(name))
                 .AddSingleton<IIdSerializer, IdSerializer>();
         }
 
         public static IServiceCollection AddQueryExecutor(
             this IServiceCollection services)
+        {
+            QueryExecutionBuilder.BuildDefault(services);
+            return services;
+        }
+        public static IServiceCollection AddQueryExecutor(
+            this IServiceCollection services,
+            string schemaName)
         {
             QueryExecutionBuilder.BuildDefault(services);
             return services;
@@ -69,10 +98,27 @@ namespace HotChocolate
         }
 
         public static IServiceCollection AddBatchQueryExecutor(
-            this IServiceCollection services)
+            this IServiceCollection services,
+            string name)
         {
             return services
-                .AddSingleton<IBatchQueryExecutor, BatchQueryExecutor>();
+                .AddSingleton<IBatchQueryExecutorProvider>(sb =>
+                {
+                    return new BatchQueryExecutorProvider(() => sb.GetServices<INamedBatchQueryExecutor>());
+                })
+                .AddSingleton<INamedBatchQueryExecutor>(sb =>
+                {
+                    var providor = sb.GetService<INamedQueryExecutorProvider>();
+                    var errorHandler = sb.GetService<IErrorHandler>();
+                    var executor = new BatchQueryExecutor(providor.GetQueryExecutor(name), errorHandler);
+                    return new NamedBatchQueryExecutor(name, executor);
+                });
+        }
+
+        public static IServiceCollection AddBatchQueryExecutor(
+            this IServiceCollection services)
+        {
+            return services.AddBatchQueryExecutor(string.Empty);
         }
 
         public static IServiceCollection AddJsonQueryResultSerializer(

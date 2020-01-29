@@ -2,6 +2,7 @@ using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using HotChocolate.AspNetCore.Subscriptions;
+using System.Threading.Tasks;
 
 namespace HotChocolate.AspNetCore
 {
@@ -41,31 +42,41 @@ namespace HotChocolate.AspNetCore
                 throw new ArgumentNullException(nameof(options));
             }
 
+            var stringSchemeName = options.SchemaName ?? string.Empty;
+            var schemenameFunction = options.SchemaNameProvider ?? ((o) =>
+            {
+                return new ValueTask<string>(stringSchemeName);
+            });
+
             applicationBuilder
                 .UseGraphQLHttpPost(new HttpPostMiddlewareOptions
                 {
                     Path = options.Path,
+                    SchemaNameProvider = schemenameFunction,
                     ParserOptions = options.ParserOptions,
                     MaxRequestSize = options.MaxRequestSize
                 })
                 .UseGraphQLHttpGet(new HttpGetMiddlewareOptions
                 {
+                    SchemaNameProvider = schemenameFunction,
                     Path = options.Path
                 })
                 .UseGraphQLHttpGetSchema(new HttpGetSchemaMiddlewareOptions
                 {
+                    SchemaNameProvider = schemenameFunction,
                     Path = options.Path.Add(new PathString("/schema"))
                 });
 
-            if (options.EnableSubscriptions)
-            {
-                applicationBuilder.UseGraphQLSubscriptions(
-                    new SubscriptionMiddlewareOptions
-                    {
-                        ParserOptions = options.ParserOptions,
-                        Path = options.SubscriptionPath
-                    });
-            }
+            //if (options.EnableSubscriptions)
+            //{
+            //    applicationBuilder.UseGraphQLSubscriptions(
+            //        new SubscriptionMiddlewareOptions
+            //        {
+            //            SchemaNameProvider = schemenameFunction,
+            //            ParserOptions = options.ParserOptions,
+            //            Path = options.SubscriptionPath
+            //        });
+            //}
 
             return applicationBuilder;
         }

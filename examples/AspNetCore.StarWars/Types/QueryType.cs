@@ -1,4 +1,4 @@
-﻿using HotChocolate.Types;
+using HotChocolate.Types;
 using StarWars.Models;
 
 #if ASPNETCLASSIC
@@ -25,6 +25,7 @@ namespace StarWars.Types
             // identity has a country
             descriptor.Field(t => t.Search(default))
                 .Type<ListType<SearchResultType>>()
+                .Ignore(this.ContextData["schemaName"] == "schema2")
                 .Authorize("HasCountry");
         }
     }

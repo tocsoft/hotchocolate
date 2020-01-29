@@ -8,6 +8,9 @@ using RequestDelegate = Microsoft.Owin.OwinMiddleware;
 #if ASPNETCLASSIC
 namespace HotChocolate.AspNetClassic
 #else
+using System;
+using System.Threading.Tasks;
+
 namespace HotChocolate.AspNetCore
 #endif
 {
@@ -16,5 +19,6 @@ namespace HotChocolate.AspNetCore
         , IParserOptionsAccessor
     {
         int MaxRequestSize { get; }
+        Func<object, ValueTask<string>> SchemaNameProvider { get; }
     }
 }

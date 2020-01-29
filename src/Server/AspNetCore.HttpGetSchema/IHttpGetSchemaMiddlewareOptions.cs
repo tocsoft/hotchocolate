@@ -9,11 +9,15 @@ using RequestDelegate = Microsoft.Owin.OwinMiddleware;
 #if ASPNETCLASSIC
 namespace HotChocolate.AspNetClassic
 #else
+using System;
+using System.Threading.Tasks;
+
 namespace HotChocolate.AspNetCore
 #endif
 {
     public interface IHttpGetSchemaMiddlewareOptions
         : IPathOptionAccessor
     {
+        Func<object, ValueTask<string>> SchemaNameProvider { get; }
     }
 }

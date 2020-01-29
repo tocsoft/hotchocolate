@@ -101,9 +101,12 @@ namespace HotChocolate.Types.Descriptors
                                 .New(context, parameter)
                                 .CreateDefinition();
 
-                        if (processed.Add(argumentDefinition.Name))
+                        if (!argumentDefinition.Ignore)
                         {
-                            arguments.Add(argumentDefinition);
+                            if (processed.Add(argumentDefinition.Name))
+                            {
+                                arguments.Add(argumentDefinition);
+                            }
                         }
                     }
                 }

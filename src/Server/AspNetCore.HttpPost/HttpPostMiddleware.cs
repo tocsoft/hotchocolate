@@ -27,10 +27,11 @@ namespace HotChocolate.AspNetCore
     {
         private const string _batchOperations = "batchOperations";
         private readonly RequestHelper _requestHelper;
-        private readonly IQueryExecutor _queryExecutor;
-        private readonly IBatchQueryExecutor _batchExecutor;
+        private readonly INamedQueryExecutorProvider _queryExecutorProvider;
+        private readonly IBatchQueryExecutorProvider _batchExecutorProvider;
         private readonly IQueryResultSerializer _resultSerializer;
         private readonly IResponseStreamSerializer _streamSerializer;
+        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
 
 #if ASPNETCLASSIC
         public HttpPostMiddleware(
@@ -70,8 +71,8 @@ namespace HotChocolate.AspNetCore
         public HttpPostMiddleware(
             RequestDelegate next,
             IHttpPostMiddlewareOptions options,
-            IQueryExecutor queryExecutor,
-            IBatchQueryExecutor batchQueryExecutor,
+            INamedQueryExecutorProvider queryExecutorProvider,
+            IBatchQueryExecutorProvider batchQueryExecutorProvider, 
             IQueryResultSerializer resultSerializer,
             IResponseStreamSerializer streamSerializer,
             IDocumentCache documentCache,
@@ -79,15 +80,16 @@ namespace HotChocolate.AspNetCore
             IErrorHandler errorHandler)
             : base(next, options, resultSerializer, errorHandler)
         {
-            _queryExecutor = queryExecutor
-                ?? throw new ArgumentNullException(nameof(queryExecutor));
-            _batchExecutor = batchQueryExecutor
-                ?? throw new ArgumentNullException(nameof(batchQueryExecutor));
+            _queryExecutorProvider = queryExecutorProvider
+                ?? throw new ArgumentNullException(nameof(queryExecutorProvider));
+            _batchExecutorProvider = batchQueryExecutorProvider
+                ?? throw new ArgumentNullException(nameof(batchQueryExecutorProvider));
             _resultSerializer = resultSerializer
                 ?? throw new ArgumentNullException(nameof(resultSerializer));
             _streamSerializer = streamSerializer
                 ?? throw new ArgumentNullException(nameof(streamSerializer));
 
+            _schemaNameProvider = options.SchemaNameProvider;
             _requestHelper = new RequestHelper(
                 documentCache,
                 documentHashProvider,
@@ -180,6 +182,9 @@ namespace HotChocolate.AspNetCore
                     QueryRequestBuilder.From(request))
                     .ConfigureAwait(false);
 
+            var schemaName = await _schemaNameProvider(context).ConfigureAwait(false);
+            var _queryExecutor = _queryExecutorProvider.GetQueryExecutor(schemaName);
+
             IExecutionResult result = await _queryExecutor
                 .ExecuteAsync(queryRequest, context.GetCancellationToken())
                 .ConfigureAwait(false);
@@ -207,6 +212,8 @@ namespace HotChocolate.AspNetCore
                     context, services, request, operationNames)
                     .ConfigureAwait(false);
 
+            var schemaName = await _schemaNameProvider(context).ConfigureAwait(false);
+            var _batchExecutor = _batchExecutorProvider.GetExecutor(schemaName);
             IResponseStream responseStream = await _batchExecutor
                 .ExecuteAsync(requestBatch, context.GetCancellationToken())
                 .ConfigureAwait(false);
@@ -234,6 +241,9 @@ namespace HotChocolate.AspNetCore
             SetResponseHeaders(
                 context.Response,
                 _streamSerializer.ContentType);
+
+            var schemaName = await _schemaNameProvider(context).ConfigureAwait(false);
+            var _batchExecutor = _batchExecutorProvider.GetExecutor(schemaName);
 
             IResponseStream responseStream = await _batchExecutor
                 .ExecuteAsync(requestBatch, context.GetCancellationToken())

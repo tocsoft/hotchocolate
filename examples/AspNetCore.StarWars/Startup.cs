@@ -29,6 +29,23 @@ namespace StarWars
             // Add GraphQL Services
             services.AddGraphQL(sp => SchemaBuilder.New()
                 .AddServices(sp)
+                .SetContextData("schemaName", "")
+
+                // Adds the authorize directive and
+                // enable the authorization middleware.
+                .AddAuthorizeDirectiveType()
+
+                .AddQueryType<QueryType>()
+                .AddMutationType<MutationType>()
+                .AddSubscriptionType<SubscriptionType>()
+                .AddType<HumanType>()
+                .AddType<DroidType>()
+                .AddType<EpisodeType>()
+                .Create());
+
+            services.AddGraphQLWithName("schema2", sp => SchemaBuilder.New()
+                .AddServices(sp)
+                .SetContextData("schemaName", "schema2")
 
                 // Adds the authorize directive and
                 // enable the authorization middleware.
@@ -80,9 +97,20 @@ namespace StarWars
 
             app
                 .UseWebSockets()
-                .UseGraphQL("/graphql")
+                .UseGraphQL(new QueryMiddlewareOptions
+                {
+                    Path = "/graphql",
+                })
                 .UsePlayground("/graphql")
-                .UseVoyager("/graphql");
+                .UseVoyager("/graphql")
+
+                .UseGraphQL(new QueryMiddlewareOptions
+                {
+                    SchemaName = "schema2",
+                    Path = "/schema2_graphql",
+                })
+                .UsePlayground("/schema2_graphql")
+                .UseVoyager("/schema2_graphql");
         }
     }
 }

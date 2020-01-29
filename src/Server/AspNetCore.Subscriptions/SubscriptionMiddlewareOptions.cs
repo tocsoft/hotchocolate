@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 
@@ -24,5 +25,7 @@ namespace HotChocolate.AspNetCore.Subscriptions
                 _subscriptionPath = value;
             }
         }
+
+        public Func<object, ValueTask<string>> SchemaNameProvider { get; set; }
     }
 }

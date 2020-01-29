@@ -25,12 +25,13 @@ namespace HotChocolate.AspNetCore
 #endif
     {
         private readonly PathString _path;
-        private readonly IQueryExecutor _queryExecutor;
+        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
+        private readonly INamedQueryExecutorProvider _queryExecutorProvider;
 
         public HttpGetSchemaMiddleware(
             RequestDelegate next,
             IHttpGetSchemaMiddlewareOptions options,
-            IQueryExecutor queryExecutor)
+            INamedQueryExecutorProvider queryExecutorProvider)
 #if ASPNETCLASSIC
             : base(next)
 #endif
@@ -43,9 +44,10 @@ namespace HotChocolate.AspNetCore
                 throw new ArgumentNullException(nameof(options));
             }
 
-            _queryExecutor = queryExecutor
-                ?? throw new ArgumentNullException(nameof(queryExecutor));
+            _queryExecutorProvider = queryExecutorProvider
+                ?? throw new ArgumentNullException(nameof(queryExecutorProvider));
             _path = options.Path;
+            _schemaNameProvider = options.SchemaNameProvider;
         }
 
 #if !ASPNETCLASSIC
@@ -72,6 +74,10 @@ namespace HotChocolate.AspNetCore
                 {
                     using (var streamWriter = new StreamWriter(memoryStream))
                     {
+
+                        var schemaName = await _schemaNameProvider(context).ConfigureAwait(false);
+                        var _queryExecutor = _queryExecutorProvider.GetQueryExecutor(schemaName);
+
                         SchemaSerializer.Serialize(
                             _queryExecutor.Schema,
                             streamWriter);
