@@ -121,6 +121,21 @@ namespace HotChocolate.Resolvers
         /// </returns>
         T Argument<T>(NameString name);
 
+
+        /// <summary>
+        /// Sets argument to a custom value.
+        /// </summary>
+        /// <param name="name">
+        /// The argument name.
+        /// </param>
+        /// <param name="overrideValue">
+        /// The overridden value.
+        /// </param>
+        /// <typeparam name="T">
+        /// The type to which the argument shall be casted to.
+        /// </typeparam>
+        void OverrideArgument<T>(NameString name, T overrideValue);
+
         /// <summary>
         /// Gets the value kind of a specific field argument.
         /// </summary>

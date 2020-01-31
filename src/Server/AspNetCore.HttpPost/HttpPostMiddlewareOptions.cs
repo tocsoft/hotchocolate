@@ -70,7 +70,7 @@ namespace HotChocolate.AspNetCore
             }
         }
 
-        public Func<object, ValueTask<string>> SchemaNameProvider { get; set; }
+        public Func<HttpContext, ValueTask<string>> SchemaNameProvider { get; set; }
     }
 
 

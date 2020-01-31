@@ -93,6 +93,9 @@ namespace HotChocolate.Execution
         public T Argument<T>(NameString name) =>
             _middlewareContext.Argument<T>(name);
 
+        public void OverrideArgument<T>(NameString name, T overrideValue) =>
+            _middlewareContext.OverrideArgument<T>(name, overrideValue);
+
         public T CustomProperty<T>(string key) =>
             _middlewareContext.CustomProperty<T>(key);
         public T Parent<T>() => _middlewareContext.Parent<T>();

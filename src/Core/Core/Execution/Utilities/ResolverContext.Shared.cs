@@ -16,6 +16,7 @@ namespace HotChocolate.Execution
             _serializedResult = null;
             _fieldSelection = null;
             _arguments = null;
+            _argumentOverrides = null;
             _cachedResolverResult = null;
             _hasCachedResolverResult = false;
 
@@ -49,6 +50,7 @@ namespace HotChocolate.Execution
             ScopedContextData = ImmutableDictionary<string, object>.Empty;
             LocalContextData = ImmutableDictionary<string, object>.Empty;
 
+            _argumentOverrides = new Dictionary<NameString, object>();
             _arguments = fieldSelection.CoerceArguments(
                 executionContext.Variables,
                 executionContext.Converter);
@@ -73,6 +75,7 @@ namespace HotChocolate.Execution
             _serializedResult = serializedResult;
             _fieldSelection = fieldSelection;
 
+            _argumentOverrides = new Dictionary<NameString, object>();
             _arguments = fieldSelection.CoerceArguments(
                 sourceContext._executionContext.Variables,
                 sourceContext._executionContext.Converter);

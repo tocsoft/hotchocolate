@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 #if ASPNETCLASSIC
 using Microsoft.Owin;
 using HotChocolate.AspNetClassic.Interceptors;
+using HttpContext = Microsoft.Owin.IOwinContext;
 #else
 using Microsoft.AspNetCore.Http;
 using HotChocolate.AspNetCore.Interceptors;
@@ -63,7 +64,7 @@ namespace HotChocolate.AspNetCore
             set;
         }
 
-        public Func<object, ValueTask<string>> SchemaNameProvider { get; set; }
+        public Func<HttpContext, ValueTask<string>> SchemaNameProvider { get; set; }
 
         public PathString SubscriptionPath
         {

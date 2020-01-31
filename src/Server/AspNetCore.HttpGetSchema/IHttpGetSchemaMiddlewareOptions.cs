@@ -4,6 +4,7 @@ using HttpContext = Microsoft.Owin.IOwinContext;
 using HttpResponse = Microsoft.Owin.IOwinResponse;
 using RequestDelegate = Microsoft.Owin.OwinMiddleware;
 #else
+using Microsoft.AspNetCore.Http;
 #endif
 
 #if ASPNETCLASSIC
@@ -18,6 +19,6 @@ namespace HotChocolate.AspNetCore
     public interface IHttpGetSchemaMiddlewareOptions
         : IPathOptionAccessor
     {
-        Func<object, ValueTask<string>> SchemaNameProvider { get; }
+        Func<HttpContext, ValueTask<string>> SchemaNameProvider { get; }
     }
 }

@@ -25,7 +25,7 @@ namespace HotChocolate.AspNetCore
 #endif
     {
         private readonly PathString _path;
-        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
+        private readonly Func<HttpContext, ValueTask<string>> _schemaNameProvider;
         private readonly INamedQueryExecutorProvider _queryExecutorProvider;
 
         public HttpGetSchemaMiddleware(
@@ -47,7 +47,7 @@ namespace HotChocolate.AspNetCore
             _queryExecutorProvider = queryExecutorProvider
                 ?? throw new ArgumentNullException(nameof(queryExecutorProvider));
             _path = options.Path;
-            _schemaNameProvider = options.SchemaNameProvider;
+            _schemaNameProvider = options.SchemaNameProvider ?? ((c) => new ValueTask<string>(string.Empty));
         }
 
 #if !ASPNETCLASSIC

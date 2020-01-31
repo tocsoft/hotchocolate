@@ -10,6 +10,7 @@ using HotChocolate.Execution.Configuration;
 using HotChocolate.Subscriptions;
 using StarWars.Data;
 using StarWars.Types;
+using Microsoft.AspNetCore.Http;
 
 namespace StarWars
 {

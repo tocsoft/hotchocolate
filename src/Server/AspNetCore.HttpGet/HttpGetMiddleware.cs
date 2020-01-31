@@ -29,7 +29,7 @@ namespace HotChocolate.AspNetCore
 
         private readonly INamedQueryExecutorProvider _queryExecutorProvider;
         private readonly IQueryResultSerializer _resultSerializer;
-        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
+        private readonly Func<HttpContext, ValueTask<string>> _schemaNameProvider;
 
 #if ASPNETCLASSIC
         public HttpGetMiddleware(
@@ -65,7 +65,7 @@ namespace HotChocolate.AspNetCore
             _resultSerializer = resultSerializer
                 ?? throw new ArgumentNullException(nameof(resultSerializer));
 
-            _schemaNameProvider = options.SchemaNameProvider;
+            _schemaNameProvider = options.SchemaNameProvider ?? ((c) => new ValueTask<string>(string.Empty));
         }
 #endif
 

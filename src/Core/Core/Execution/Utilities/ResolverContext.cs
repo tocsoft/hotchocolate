@@ -23,6 +23,7 @@ namespace HotChocolate.Execution
         private IDictionary<string, object> _serializedResult;
         private FieldSelection _fieldSelection;
         private IReadOnlyDictionary<NameString, ArgumentValue> _arguments;
+        private IDictionary<NameString, object> _argumentOverrides;
 
         public ITypeConversion Converter =>
             _executionContext.Converter;

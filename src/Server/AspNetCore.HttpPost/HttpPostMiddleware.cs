@@ -31,7 +31,7 @@ namespace HotChocolate.AspNetCore
         private readonly IBatchQueryExecutorProvider _batchExecutorProvider;
         private readonly IQueryResultSerializer _resultSerializer;
         private readonly IResponseStreamSerializer _streamSerializer;
-        private readonly Func<object, ValueTask<string>> _schemaNameProvider;
+        private readonly Func<HttpContext, ValueTask<string>> _schemaNameProvider;
 
 #if ASPNETCLASSIC
         public HttpPostMiddleware(
@@ -89,7 +89,7 @@ namespace HotChocolate.AspNetCore
             _streamSerializer = streamSerializer
                 ?? throw new ArgumentNullException(nameof(streamSerializer));
 
-            _schemaNameProvider = options.SchemaNameProvider;
+            _schemaNameProvider = options.SchemaNameProvider ?? ((c) => new ValueTask<string>(string.Empty));
             _requestHelper = new RequestHelper(
                 documentCache,
                 documentHashProvider,

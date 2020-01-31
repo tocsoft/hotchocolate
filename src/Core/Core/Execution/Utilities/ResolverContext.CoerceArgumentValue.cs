@@ -5,6 +5,8 @@ using HotChocolate.Language;
 using HotChocolate.Properties;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using HotChocolate.Types.Descriptors;
+using HotChocolate.Types.Descriptors.Definitions;
 using HotChocolate.Utilities;
 
 namespace HotChocolate.Execution
@@ -12,6 +14,13 @@ namespace HotChocolate.Execution
     internal partial class ResolverContext
         : IMiddlewareContext
     {
+        public void OverrideArgument<T>(NameString name, T overrideValue)
+        {
+            name.EnsureNotEmpty(nameof(name));
+
+            _argumentOverrides[name] = overrideValue;
+        }
+
         public T Argument<T>(NameString name)
         {
             name.EnsureNotEmpty(nameof(name));
@@ -20,6 +29,14 @@ namespace HotChocolate.Execution
             {
                 EnsureNoError(argumentValue);
                 return CoerceArgumentValue<T>(name, argumentValue);
+            }
+
+            if (_argumentOverrides.TryGetValue(name, out object value))
+            {
+                if (TryConvertValue<T>(value?.GetType() ?? typeof(object), value, out var finalValue))
+                {
+                    return finalValue;
+                }
             }
 
             return default;
