@@ -25,18 +25,19 @@ namespace HotChocolate.Execution
         {
             name.EnsureNotEmpty(nameof(name));
 
-            if (_arguments.TryGetValue(name, out ArgumentValue argumentValue))
-            {
-                EnsureNoError(argumentValue);
-                return CoerceArgumentValue<T>(name, argumentValue);
-            }
-
             if (_argumentOverrides.TryGetValue(name, out object value))
             {
                 if (TryConvertValue<T>(value?.GetType() ?? typeof(object), value, out var finalValue))
                 {
                     return finalValue;
                 }
+                return default;
+            }
+
+            if (_arguments.TryGetValue(name, out ArgumentValue argumentValue))
+            {
+                EnsureNoError(argumentValue);
+                return CoerceArgumentValue<T>(name, argumentValue);
             }
 
             return default;
